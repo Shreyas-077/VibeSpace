@@ -26,6 +26,17 @@ app.use(cors(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", 
+    "default-src 'self'; " +
+    "img-src 'self' https://vibespace.onrender.com data:; " +
+    "script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline';"
+  );
+  next();
+});
+
+
 app.use("/api/auth", authRoutes);
 app.use("/api/msg", msgRoutes);
 
