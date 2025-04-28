@@ -1,6 +1,6 @@
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
-
+import { BsCheck, BsCheckAll } from 'react-icons/bs';
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton.jsx";
@@ -80,6 +80,12 @@ const ChatContainer = () => {
                 />
               )}
               {message.text && <p>{message.text}</p>}
+              {message.senderId === authUser._id && (
+                <span className="absolute bottom-0 right-0 text-xs">
+                  {message.status === 'sent' && <BsCheck className="text-gray-400" />}
+                  {message.status === 'delivered' && <BsCheckAll className="text-gray-400" />}
+                </span>
+              )}
             </div>
           </div>
         ))}
