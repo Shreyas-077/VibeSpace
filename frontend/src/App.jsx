@@ -7,13 +7,11 @@ import Settings from './pages/Settings'
 import Profile from './pages/Profile'
 import { Navigate } from 'react-router-dom'
 import useAuthStore from "./store/useAuthStore"
-import { useDebugValue, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Loader } from 'lucide-react'
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import useThemeStore from './store/useThemeStore'
-
-
 
 function App() {
   const { checkAuth, authUser, isCheckingAuth, connectSocket, onlineUsers, disconnectSocket, socket } = useAuthStore();
@@ -23,29 +21,24 @@ function App() {
 
   useEffect(() => {
     checkAuth();
-  }
-  , [checkAuth]);
+  }, [checkAuth]);
+
+  useEffect(() => {
+    if (authUser) {
+      connectSocket();
+    }
+    return () => {
+      disconnectSocket();
+    };
+  }, [authUser]);
+
   console.log("Auth User Details:", {
     authUser: authUser,
     userId: authUser?._id,
     isAuthenticated: !!authUser
   });
 
-  // useEffect(() => {
-  //   if (authUser && !socket) {
-  //     connectSocket();
-  //   }
-    
-  //   return () => {
-  //     if (socket) {
-  //       disconnectSocket();
-  //     }
-  //   };
-  // }, [authUser, socket, connectSocket, disconnectSocket]);
-
   console.log({authUser});
-
-
 
   if(isCheckingAuth && !authUser){
     return(

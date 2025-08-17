@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import {connect} from './lib/db.js';
 import cookieParser from 'cookie-parser';
 import msgRoutes from './routes/msg.route.js';
+import filterRoutes from './routes/filter.route.js';
 import cors from 'cors';
 import path from 'path';
 import { server,app } from './lib/socket.js';
@@ -19,26 +20,27 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors(
     {
-        origin: 'https://vibespace.onrender.com',
+        origin: ['http://localhost:5173', 'http://localhost:5174'],
         credentials: true
     }
 ));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-app.use((req, res, next) => {
-  res.setHeader("Content-Security-Policy", 
-    "default-src 'self'; " +
-    "img-src 'self' https://vibespace.onrender.com data:; " +
-    "script-src 'self' 'unsafe-inline'; " +
-    "style-src 'self' 'unsafe-inline';"
-  );
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader("Content-Security-Policy", 
+//     "default-src 'self'; " +
+//     "img-src 'self' http://localhost:5173/ data:; " +
+//     "script-src 'self' 'unsafe-inline'; " +
+//     "style-src 'self' 'unsafe-inline';"
+//   );
+//   next();
+// });
 
 
 app.use("/api/auth", authRoutes);
 app.use("/api/msg", msgRoutes);
+app.use("/api/filter", filterRoutes);
 
 if (process.env.NODE_ENV === "production") {
     app.use(express.static(path.join(__dirname, "../frontend/dist")));

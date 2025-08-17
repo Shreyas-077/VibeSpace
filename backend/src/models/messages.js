@@ -19,6 +19,25 @@ const messageSchema = new mongoose.Schema({
         type: String,
         enum: ['sent', 'delivered'],
         default: 'sent'
+    },
+    filterAnalysis: {
+        wasFiltered: {
+            type: Boolean,
+            default: false
+        },
+        originalText: String,
+        severity: {
+            type: String,
+            enum: ['clean', 'mild', 'moderate', 'severe']
+        },
+        confidence: Number,
+        riskScore: Number,
+        warning: String,
+        analysis: {
+            sentiment: Object,
+            toxicity: Object,
+            hasProfanity: Boolean
+        }
     }
 }, { timestamps: true });
 

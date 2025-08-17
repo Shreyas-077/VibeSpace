@@ -3,6 +3,10 @@ import Message from "../models/messages.js";
 
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import SimpleProfanityFilter from "../lib/simple-profanity-filter.js";
+
+// Initialize the AI profanity filter
+const aiFilter = new SimpleProfanityFilter();
 
 export const getUsersBySideBar = async (req, res) => {
   try {
@@ -83,25 +87,81 @@ export const sendMessage = async (req, res) => {
           imageUrl = uploadResponse.secure_url;
       }
 
+      let filteredText = text;
+      let filterAnalysis = null;
+
+      // Apply AI profanity filter to text messages
+      if (text && text.trim() !== '') {
+          const filterResult = aiFilter.filterText(text);
+          
+          // If message should be blocked
+          if (filterResult.blocked) {
+              return res.status(400).json({ 
+                  error: "Message blocked due to inappropriate content",
+                  reason: filterResult.reason,
+                  severity: filterResult.analysis.severity,
+                  confidence: filterResult.analysis.confidence
+              });
+          }
+
+          // If message was filtered
+          if (filterResult.wasFiltered) {
+              filteredText = filterResult.filteredText;
+              filterAnalysis = {
+                  wasFiltered: true,
+                  originalText: text,
+                  severity: filterResult.analysis.severity,
+                  confidence: filterResult.analysis.confidence,
+                  riskScore: filterResult.analysis.riskScore
+              };
+          }
+
+          // If message has a warning
+          if (filterResult.warning) {
+              filterAnalysis = {
+                  ...filterAnalysis,
+                  warning: filterResult.reason,
+                  analysis: filterResult.analysis
+              };
+          }
+      }
+
       const newMessage = new Message({
           senderId,
           receiverId,
-          text,
+          text: filteredText,
           image: imageUrl,
-          status: 'sent'  // Default status when message is created
+          status: 'sent',  // Default status when message is created
+          filterAnalysis: filterAnalysis // Store filter analysis for admin review
       });
 
       await newMessage.save();
 
       const receiverSocketId = getReceiverSocketId(receiverId);
       if (receiverSocketId) {
-          io.to(receiverSocketId).emit("newMessage", newMessage);
+          // Send the filtered message to receiver
+          const messageToSend = {
+              ...newMessage.toObject(),
+              filterAnalysis: undefined // Don't send filter analysis to users
+          };
+          
+          io.to(receiverSocketId).emit("newMessage", messageToSend);
+          
           // Update status to delivered if receiver is online
           newMessage.status = 'delivered';
           await newMessage.save();
       }
 
-      res.status(201).json(newMessage);
+      // Send response without filter analysis details to sender
+      const responseMessage = {
+          ...newMessage.toObject(),
+          filterAnalysis: filterAnalysis ? { 
+              wasFiltered: filterAnalysis.wasFiltered,
+              warning: filterAnalysis.warning 
+          } : undefined
+      };
+
+      res.status(201).json(responseMessage);
   } catch (error) {
       console.log("Error in sendMessage controller: ", error.message);
       res.status(500).json({ error: "Internal server error" });

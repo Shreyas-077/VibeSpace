@@ -26,7 +26,9 @@ export const signup = async(req, res) => {
         if(newUser) {
             getToken(newUser._id,res);
             await newUser.save();
-            return res.status(201).json({message: "User created successfully"});
+            // Fetch the saved user without password
+            const userToSend = await User.findById(newUser._id).select("-password");
+            return res.status(201).json(userToSend);
         }
     } catch (error) {
         console.error(error);
@@ -49,14 +51,15 @@ export const login = async(req, res) => {
             return res.status(400).json({error: "Invalid credentials"});
         }
         getToken(user._id,res);
-        return res.status(200).json({message: "Login successful"});
+        // Fetch the user without password
+        const userToSend = await User.findById(user._id).select("-password");
+        return res.status(200).json(userToSend);
 
     }
     catch (error) {
         console.error(error);
         return res.status(500).json({error: "Something went wrong"});
     }
-
 };
 
 export const logout = (req, res) => {

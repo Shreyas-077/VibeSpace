@@ -20,7 +20,7 @@ const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.get("/auth/check");
 
       set({ authUser: res.data });
-      get().connectSocket();
+      // get().connectSocket();
     } catch (error) {
       console.log("Error in checkAuth:", error);
       set({ authUser: null });
@@ -35,9 +35,10 @@ const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/signup", data);
       set({ authUser: res.data });
       toast.success("Account created successfully");
-      get().connectSocket();
+      // get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      const errorMessage = error.response?.data?.message || error.message || "An error occurred during signup";
+      toast.error(errorMessage);
     } finally {
       set({ isSigningUp: false });
     }
@@ -50,9 +51,10 @@ const useAuthStore = create((set, get) => ({
       set({ authUser: res.data });
       toast.success("Logged in successfully");
 
-      get().connectSocket();
+      // get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      const errorMessage = error.response?.data?.message || error.message || "An error occurred during login";
+      toast.error(errorMessage);
     } finally {
       set({ isLoggingIn: false });
     }
@@ -84,20 +86,35 @@ const useAuthStore = create((set, get) => ({
   },
 
   connectSocket: () => {
-    const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
+    const { authUser, socket } = get();
+    if (!authUser) return;
 
-    const socket = io(BASE_URL, {
-      query: {
-        userId: authUser._id,
-      },
+    // Disconnect previous socket if exists
+    if (socket && socket.connected) {
+      socket.disconnect();
+    }
+
+    const newSocket = io("http://localhost:3000", {
+      query: { userId: authUser._id },
+      withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
     });
-    socket.connect();
 
-    set({ socket: socket });
+    newSocket.on("connect", () => {
+      console.log("Socket connected successfully");
+      set({ socket: newSocket });
+    });
 
-    socket.on("getOnlineUsers", (userIds) => {
-      set({ onlineUsers: userIds });
+    newSocket.on("getOnlineUsers", (users) => {
+      console.log("Online users updated:", users);
+      set({ onlineUsers: users });
+    });
+
+    // Add heartbeat response
+    newSocket.on("ping", () => {
+      newSocket.emit("pong");
     });
   },
   disconnectSocket: () => {
